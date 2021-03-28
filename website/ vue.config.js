@@ -3,6 +3,9 @@ const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin')
 const webpack = require('webpack')
 
 module.exports = {
+  transpileDependencies: [
+    'vuetify'
+  ],
   chainWebpack: (config) => {
     // rust wasm bindgen https://github.com/rustwasm/wasm-bindgen
     config
