@@ -5,6 +5,60 @@
         <v-switch v-model="customBoundingBox" label="Custom Bounding Box"></v-switch>
 
         <div>
+          <v-range-slider v-model="lonRange" min="-180" max="180" hide-details v-if="customBoundingBox">
+            <template v-slot:prepend>
+              <v-text-field
+                :value="lonRange[0]"
+                class="mt-0 pt-0"
+                hide-details
+                single-line
+                type="number"
+                style="width: 60px"
+                @change="$set(lonRange, 0, $event)"
+              ></v-text-field>
+            </template>
+            <template v-slot:append>
+              <v-text-field
+                :value="lonRange[1]"
+                class="mt-0 pt-0"
+                hide-details
+                single-line
+                type="number"
+                style="width: 60px"
+                @change="$set(lonRange, 1, $event)"
+              ></v-text-field>
+            </template>
+          </v-range-slider>
+        </div>
+
+        <div>
+          <v-range-slider v-model="latRange" min="-90" max="90" hide-details v-if="customBoundingBox">
+            <template v-slot:prepend>
+              <v-text-field
+                :value="latRange[0]"
+                class="mt-0 pt-0"
+                hide-details
+                single-line
+                type="number"
+                style="width: 60px"
+                @change="$set(latRange, 0, $event)"
+              ></v-text-field>
+            </template>
+            <template v-slot:append>
+              <v-text-field
+                :value="latRange[1]"
+                class="mt-0 pt-0"
+                hide-details
+                single-line
+                type="number"
+                style="width: 60px"
+                @change="$set(latRange, 1, $event)"
+              ></v-text-field>
+            </template>
+          </v-range-slider>
+        </div>
+
+        <div>
           <v-slider v-model="count" min="1" max="10000" label="Count">
             <template v-slot:append>
                   <v-text-field
@@ -33,7 +87,7 @@
 </template>
 
 <script>
-import { VBtn, VSwitch, VSlider, VTextField, VDataTable } from 'vuetify/lib'
+import { VBtn, VSwitch, VSlider, VRangeSlider, VTextField, VDataTable } from 'vuetify/lib'
 const wasm = import('../../pkg')
 const textEncoder = new TextEncoder()
 
@@ -46,6 +100,7 @@ export default {
     VBtn,
     VSwitch,
     VSlider,
+    VRangeSlider,
     VTextField,
     VDataTable
   },
@@ -54,6 +109,8 @@ export default {
       lonLatGenerator: null,
       lon: new Float32Array(),
       lat: new Float32Array(),
+      lonRange: [-180, 180],
+      latRange: [-90, 90],
       customBoundingBox: false,
       count: 100,
       coordinates: [],
@@ -91,19 +148,22 @@ export default {
       return this.lonLatGenerator.get_random_numbers_in_range_fast(from, until, count)
     },
     getRandomNumbersInRangeBetterEntropy (from, until, count) {
-      this.lonLatGenerator.get_random_numbers_in_range_better_entropy(from, until, count)
+      return this.lonLatGenerator.get_random_numbers_in_range_better_entropy(from, until, count)
     },
     generateRandomCoordinatesFast () {
-      const lon = this.getRandomLonFast(this.count)
-      const lat = this.getRandomLatFast(this.count)
-      this.lon = lon
-      this.lat = lat
+      if (this.customBoundingBox) {
+        this.lon = this.getRandomNumberInRangeFast(this.lonRange[0], this.lonRange[1], this.count)
+        this.lat = this.getRandomNumberInRangeFast(this.latRange[0], this.latRange[1], this.count)
+      } else {
+        this.lon = this.getRandomLonFast(this.count)
+        this.lat = this.getRandomLatFast(this.count)
+      }
 
       this.coordinates = []
-      for (let i = 0; i < lon.length; i++) {
+      for (let i = 0; i < this.lon.length; i++) {
         this.coordinates.push({
-          lon: lon[i],
-          lat: lat[i],
+          lon: this.lon[i],
+          lat: this.lat[i],
           i
         })
       }
@@ -140,6 +200,7 @@ export default {
         pushIntoBuffer(NEW_LINE)
       }
 
+      // create fake link and simulate download click
       const link = document.createElement('a')
       link.download = 'coordinates.csv'
       const blob = new Blob([buffer.buffer], { type: 'text/csv' })
@@ -178,7 +239,7 @@ export default {
   grid-row-gap: 10px;
 
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
+  grid-template-rows: auto;
 
   grid-template-areas: 'inp out';
 }
