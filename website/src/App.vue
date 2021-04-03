@@ -59,7 +59,7 @@
         </div>
 
         <div>
-          <v-slider v-model="count" min="1" max="10000" label="Count">
+          <v-slider v-model="count" min="1" max="1000000" label="Count">
             <template v-slot:append>
                   <v-text-field
                     v-model="count"
@@ -67,12 +67,26 @@
                     hide-details
                     single-line
                     type="number"
-                    style="width: 60px"
+                    style="width: 80px"
                   ></v-text-field>
                 </template>
           </v-slider>
         </div>
 
+        <div>
+          <v-select
+            v-model="selectedAlgorithm"
+            :hint="`Algorithm: ${selectedAlgorithm.algo}`"
+            :items="randomAlgorithms"
+            item-text="description"
+            item-value="algo"
+            label="Random Number Generator"
+            persistent-hint
+            return-object
+          ></v-select>
+        </div>
+
+        <br/>
         <v-btn :disabled="!wasmReady" @click="generateButtonClicked">generate coordinates</v-btn>
         <br/>
         <v-btn :disabled="!coordinatesExist" @click="downloadCsvClicked">download csv</v-btn>
@@ -87,7 +101,7 @@
 </template>
 
 <script>
-import { VBtn, VSwitch, VSlider, VRangeSlider, VTextField, VDataTable } from 'vuetify/lib'
+import { VBtn, VSwitch, VSlider, VRangeSlider, VTextField, VDataTable, VSelect } from 'vuetify/lib'
 const wasm = import('../../pkg')
 const textEncoder = new TextEncoder()
 
@@ -102,7 +116,8 @@ export default {
     VSlider,
     VRangeSlider,
     VTextField,
-    VDataTable
+    VDataTable,
+    VSelect
   },
   data () {
     return {
@@ -125,12 +140,21 @@ export default {
           align: 'start',
           value: 'lat'
         }
-      ]
+      ],
+      randomAlgorithms: [
+        { description: 'fast', algo: 'Xoshiro128PlusPlus' },
+        { description: 'better entropy', algo: 'Crypto.getRandomValues()' }
+      ],
+      selectedAlgorithm: {}
     }
   },
   methods: {
     generateButtonClicked () {
-      this.generateRandomCoordinatesFast()
+      if (this.selectedAlgorithm.description === 'better entropy') {
+        this.generateRandomCoordinatesBetterEntropy()
+      } else {
+        this.generateRandomCoordinatesFast()
+      }
     },
     getRandomLatFast (count) {
       return this.lonLatGenerator.get_random_lat_coordinates_fast(count)
@@ -158,9 +182,23 @@ export default {
         this.lon = this.getRandomLonFast(this.count)
         this.lat = this.getRandomLatFast(this.count)
       }
-
+      this.updatePreview()
+    },
+    generateRandomCoordinatesBetterEntropy () {
+      if (this.customBoundingBox) {
+        this.lon = this.getRandomNumbersInRangeBetterEntropy(this.lonRange[0], this.lonRange[1], this.count)
+        this.lat = this.getRandomNumbersInRangeBetterEntropy(this.latRange[0], this.latRange[1], this.count)
+      } else {
+        this.lon = this.getRandomLonBetterEntropy(this.count)
+        this.lat = this.getRandomLatBetterEntropy(this.count)
+      }
+      this.updatePreview()
+    },
+    updatePreview () {
+      // show max 1000 coordinates in preview
+      const previewCount = Math.min(this.lon.length, 1000)
       this.coordinates = []
-      for (let i = 0; i < this.lon.length; i++) {
+      for (let i = 0; i < previewCount; i++) {
         this.coordinates.push({
           lon: this.lon[i],
           lat: this.lat[i],
@@ -216,6 +254,9 @@ export default {
     coordinatesExist () {
       return this.lon.length > 0
     }
+  },
+  beforeMount: function () {
+    this.selectedAlgorithm = this.randomAlgorithms[0]
   },
   created: async function () {
     this.lonLatGenerator = await wasm
