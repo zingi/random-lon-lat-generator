@@ -2,10 +2,12 @@
   <v-app>
     <div id="app">
       <div id="input">
+        <!-- enable custom bounding box -->
         <v-switch v-model="customBoundingBox" label="Custom Bounding Box"></v-switch>
 
+        <!-- select custom lon range -->
         <div>
-          <v-range-slider v-model="lonRange" min="-180" max="180" hide-details v-if="customBoundingBox">
+          <v-range-slider v-model="lonRange" min="-180" max="180" v-if="customBoundingBox" hint="Longitude">
             <template v-slot:prepend>
               <v-text-field
                 :value="lonRange[0]"
@@ -31,8 +33,9 @@
           </v-range-slider>
         </div>
 
+        <!-- select custom lat range -->
         <div>
-          <v-range-slider v-model="latRange" min="-90" max="90" hide-details v-if="customBoundingBox">
+          <v-range-slider v-model="latRange" min="-90" max="90" v-if="customBoundingBox" hint="Latitude">
             <template v-slot:prepend>
               <v-text-field
                 :value="latRange[0]"
@@ -58,6 +61,9 @@
           </v-range-slider>
         </div>
 
+        <br v-if="customBoundingBox"/>
+
+        <!-- how many random coordinates should be generated -->
         <div>
           <v-slider v-model="count" min="1" max="1000000" label="Count">
             <template v-slot:append>
@@ -73,6 +79,7 @@
           </v-slider>
         </div>
 
+        <!-- which random number generator should be used -->
         <div>
           <v-select
             v-model="selectedAlgorithm"
@@ -96,12 +103,17 @@
         <h2>Preview</h2>
         <v-data-table dense disable-sort :headers="headers" :items="coordinates" item-key="i" class="elevation-1" id="preview-table"></v-data-table>
       </div>
+
+      <v-snackbar v-model="showSnackbar" timeout="2000">
+        {{ snackbarContent }}
+      </v-snackbar>
     </div>
   </v-app>
 </template>
 
 <script>
-import { VBtn, VSwitch, VSlider, VRangeSlider, VTextField, VDataTable, VSelect } from 'vuetify/lib'
+import { VBtn, VSwitch, VSlider, VRangeSlider, VTextField, VDataTable, VSelect, VSnackbar } from 'vuetify/lib'
+import prettyMilliseconds from 'pretty-ms'
 const wasm = import('../../pkg')
 const textEncoder = new TextEncoder()
 
@@ -117,7 +129,8 @@ export default {
     VRangeSlider,
     VTextField,
     VDataTable,
-    VSelect
+    VSelect,
+    VSnackbar
   },
   data () {
     return {
@@ -145,7 +158,9 @@ export default {
         { description: 'fast', algo: 'Xoshiro128PlusPlus' },
         { description: 'better entropy', algo: 'Crypto.getRandomValues()' }
       ],
-      selectedAlgorithm: {}
+      selectedAlgorithm: {},
+      showSnackbar: false,
+      snackbarContent: ''
     }
   },
   methods: {
@@ -175,6 +190,7 @@ export default {
       return this.lonLatGenerator.get_random_numbers_in_range_better_entropy(from, until, count)
     },
     generateRandomCoordinatesFast () {
+      const start = new Date().getTime()
       if (this.customBoundingBox) {
         this.lon = this.getRandomNumberInRangeFast(this.lonRange[0], this.lonRange[1], this.count)
         this.lat = this.getRandomNumberInRangeFast(this.latRange[0], this.latRange[1], this.count)
@@ -182,9 +198,13 @@ export default {
         this.lon = this.getRandomLonFast(this.count)
         this.lat = this.getRandomLatFast(this.count)
       }
+      const elapsed = new Date().getTime() - start
+      this.showMessage(`took: ${prettyMilliseconds(elapsed)}`)
+
       this.updatePreview()
     },
     generateRandomCoordinatesBetterEntropy () {
+      const start = new Date().getTime()
       if (this.customBoundingBox) {
         this.lon = this.getRandomNumbersInRangeBetterEntropy(this.lonRange[0], this.lonRange[1], this.count)
         this.lat = this.getRandomNumbersInRangeBetterEntropy(this.latRange[0], this.latRange[1], this.count)
@@ -192,6 +212,9 @@ export default {
         this.lon = this.getRandomLonBetterEntropy(this.count)
         this.lat = this.getRandomLatBetterEntropy(this.count)
       }
+      const elapsed = new Date().getTime() - start
+      this.showMessage(`took: ${prettyMilliseconds(elapsed)}`)
+
       this.updatePreview()
     },
     updatePreview () {
@@ -207,6 +230,7 @@ export default {
       }
     },
     downloadCsvClicked () {
+      const start = new Date().getTime()
       // max length in byte of lon or lat
       const maxNumberByteLength = 19
       // max count of bytes, which lon and lat arr could occupy
@@ -245,6 +269,13 @@ export default {
       link.href = URL.createObjectURL(blob)
       link.click()
       URL.revokeObjectURL(link.href)
+
+      this.showMessage(`took: ${prettyMilliseconds(new Date().getTime() - start)}`)
+    },
+    showMessage (content) {
+      this.showSnackbar = false
+      this.snackbarContent = content
+      this.showSnackbar = true
     }
   },
   computed: {
@@ -298,6 +329,7 @@ export default {
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
+  padding-top: 20px;
 }
 
 #preview-table {
@@ -311,6 +343,14 @@ export default {
     grid-template-areas:
       'inp'
       'out';
+  }
+
+  #input {
+    padding: 0px 15px 20px 15px;
+  }
+
+  #output {
+    padding-top: 0;
   }
 }
 </style>
