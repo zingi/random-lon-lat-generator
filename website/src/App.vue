@@ -80,7 +80,7 @@
 
       <div id="output">
         <h2>Preview</h2>
-        <v-data-table dense :headers="headers" :items="coordinates" item-key="i" class="elevation-1" id="preview-table"></v-data-table>
+        <v-data-table dense disable-sort :headers="headers" :items="coordinates" item-key="i" class="elevation-1" id="preview-table"></v-data-table>
       </div>
     </div>
   </v-app>
