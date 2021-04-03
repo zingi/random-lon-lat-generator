@@ -2,7 +2,7 @@ const path = require('path')
 const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin')
 
 module.exports = {
-  outputDir: 'docs',
+  outputDir: '../docs',
   publicPath: process.env.NODE_ENV === 'production' ? '/random-lon-lat-generator/' : '/',
   transpileDependencies: [
     'vuetify'
