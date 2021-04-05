@@ -20,5 +20,11 @@ module.exports = {
           })
       )
       .end()
+
+    // set <title> name
+    config.plugin('html').tap(args => {
+      args[0].title = 'Lon Lat Generator'
+      return args
+    })
   }
 }
